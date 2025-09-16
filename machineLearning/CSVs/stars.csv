@@ -3,10 +3,10 @@
 #extraDataFilter,0
 #inputs,1
 #inputsNum,4
-#inputsFilter,1,1,1,1
+#inputsFilter,0,0,1,0
 #outputs,1
 #outputsNum,12
-#outputsFilter,1,0,0,0,0,0,0,0,0,0,0,0
+#outputsFilter,0,0,0,0,0,0,1,1,1,1,1,1
 Index,Temperature,L,R,A_M,Type,Color_Blue-White,Color_Orange,Color_Red,Color_White,Color_White-Yellow,Spectral_Class_B,Spectral_Class_F,Spectral_Class_G,Spectral_Class_K,Spectral_Class_M,Spectral_Class_O
 0,3068,0.0024,0.17,16.12,0,0,0,1,0,0,0,0,0,0,1,0
 1,3042,0.0005,0.1542,16.6,0,0,0,1,0,0,0,0,0,0,1,0

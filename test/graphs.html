@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: none;
+            overflow-y: hidden;
+            background-color: rgb(40, 40, 40);
+        }
+    </style>
+</head>
+<body onload="onload()"> 
+    <canvas id="canvas" style="width: 100vw; height: 100vh;"></canvas>
+
+    <script src="../util/classPackage.js"></script>
+    <script src="../util/utilFunctions.js"></script>
+
+    <script>
+        let canvas = document.getElementById('canvas');
+        let ctx = canvas.getContext('2d');
+
+        let loop;
+        let tickRate = 16;
+        let tick = 0;
+
+        let waves = [
+            (x) => {
+                return Math.sin(1 * x);
+            },
+            (x) => {
+                return Math.cos(1 * x);
+            },
+            (x) => {
+                return Math.sin(3 * x);
+            }
+        ];
+
+        let colors = [
+            "rgba(0, 0, 255, 1)", "rgba(255, 0, 0, 1)", "rgba(0, 255, 0, 1)"
+        ];
+
+        let summedColor = "rgba(0, 0, 0, 1)";
+
+        let waveFlags = [1, 1, 0, 0];
+
+        let numPoints = 1000;
+
+        let waveSpeed = 0.0;
+        let markerSpeed = 1;
+        let defaultWindingFrequency = 0;
+        let windingFrequencySpeed = 0.005;
+        let windingFrequencyMax = 10;
+        let windingFrequencyPoints = 200;
+
+        let averageXPointsArray = [[[0, 0]]];
+        let averageYPointsArray = [[[0, 0]]];
+
+        let waveGraph = new GraphCartesian(
+            {
+                xMin: -2 * Math.PI,
+                xMax: 2 * Math.PI,
+                yMin: -1,
+                yMax: 1,
+                positionX: (canvas.clientWidth / 4) << 0,
+                positionY: (canvas.clientHeight / 4) << 0,
+                width: 600,
+                height: 120,
+                xScale: 1,
+                yScale: -1,
+                xTicks: 9,
+                xTickOffset: 5,
+                yTicks: 3,
+                yTickOffset: 5,   
+                axisColor: "lightgrey",
+                graphColor: "rgba(0, 0, 0, 1)",
+            }
+        );
+
+        let averageXGraph = new GraphCartesian(
+            {
+                xMin: 0,
+                xMax: windingFrequencyMax,
+                yMin: 0,
+                yMax: 1,
+                positionX: (canvas.clientWidth / 4) << 0,
+                positionY: (canvas.clientHeight / 2) << 0,
+                width: 600,
+                height: 120,
+                xScale: 1,
+                yScale: -1,
+                xTicks: 11,
+                xTickOffset: 5,
+                yTicks: 3,
+                yTickOffset: 5,   
+                axisColor: "lightgrey",
+                graphColor: "rgba(0, 0, 0, 1)",
+            }
+        );
+
+        let averageYGraph = new GraphCartesian(
+            {
+                xMin: 0,
+                xMax: windingFrequencyMax,
+                yMin: 0,
+                yMax: 1,
+                positionX: (canvas.clientWidth / 4) << 0,
+                positionY: (canvas.clientHeight / 4 * 3) << 0,
+                width: 600,
+                height: 120,
+                xScale: 1,
+                yScale: -1,
+                xTicks: 11,
+                xTickOffset: 5,
+                yTicks: 3,
+                yTickOffset: 5,   
+                axisColor: "lightgrey",
+                graphColor: "rgba(0, 0, 0, 1)",
+            }
+        );
+
+        let polarGraph = new GraphPolar(
+            {
+                rMin: 0,
+                rMax: 1,
+                windingFrequency: defaultWindingFrequency,
+                positionX: (canvas.clientWidth / 4 * 3) << 0,
+                positionY: (canvas.clientHeight / 2) << 0,
+                radius: 200,
+                xScale: 1,
+                yScale: -1,
+                rTicks: 3,
+                thetaTicks: 8,
+                rLabelOffset: 5,
+                thetaLabelOffset: 18,
+                axisColor: "lightgrey",
+                graphColor: "rgba(0, 0, 0, 1)",
+            }
+        )
+
+        function onload() {
+            try {
+                Terminal.init();
+                Terminal.hide();
+
+                setup();
+                startLoop();
+
+            } catch (error) {
+                alert(error.stack);
+            }
+        }
+
+        function setup() {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+            
+            ctx.font = "12px serif"
+
+            for (let i = 0; i < waves.length; i++) {
+                colors[i] = colors[i % colors.length];
+            }
+
+            if (colors.length > waves.length) {
+                colors = colors.slice(0, waves.length);
+            }
+
+            colors.push(summedColor);
+            waves.push((x) => {
+                let sum = 0;
+
+                for (let i = 0; i < waves.length - 1; i++) {
+                    sum += waves[i](x);
+                }
+
+                return sum;
+            });
+
+            for (let i = 0; i < waves.length; i++) {
+                averageXPointsArray[i] = [[0, 0]];
+                averageYPointsArray[i] = [[0, 0]];
+            }
+        }
+
+        function startLoop() {
+            loop = setInterval(function() {
+                try {
+                    update();
+                    draw();
+                } catch (error) {
+                    Terminal.error(error);
+                }
+            }, tickRate);
+        }
+
+        function update() {
+            tick++;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            waveGraph.drawAxes();
+            averageXGraph.drawAxes();
+            averageYGraph.drawAxes();
+            polarGraph.drawAxes();
+
+            polarGraph.changeWindingFrequency((defaultWindingFrequency + tick * windingFrequencySpeed) % windingFrequencyMax)
+
+            let xMin = waveGraph.xMin;
+            let xMax = waveGraph.xMax;
+
+            let marker = ((tick * markerSpeed) % numPoints) << 0;
+
+            for (let i = 0; i < waves.length; i++) {
+                if (!waveFlags[i]) {
+                    continue;
+                }
+
+                let wave = waves[i];
+                let color = colors[i % colors.length];
+
+                let wavePoints = [];
+                let waveMarkers = [];
+                let polarPoints = [];
+                let polarMarkers = [];
+                let averageXPoints = averageXPointsArray[i];
+                let averageYPoints = averageYPointsArray[i];
+
+                for (let j = 0; j < numPoints; j++) {
+                    let x = xMin + (xMax - xMin) * (j / (numPoints - 1));
+                    let y = wave(x + tick * waveSpeed)
+
+                    wavePoints[j] = [x, y];
+                    polarPoints[j] = [y, x];
+
+                    if (j == marker) {
+                        waveMarkers.push([x, y]);
+                        polarMarkers.push([y, x]);
+                    }
+                }
+
+                let currentAverageX = 0;
+                let currentAverageY = 0;
+
+                if (tick == 1 || waveSpeed != 0) {
+                    for (let j = 0; j < windingFrequencyPoints; j++) {
+                        let windingFrequency = defaultWindingFrequency + j / windingFrequencyPoints * windingFrequencyMax;
+
+                        let amplitudes = getAmplitudes(wavePoints, windingFrequency, xMax - xMin);
+
+                        let averageX = amplitudes[0];
+                        let averageY = amplitudes[1];
+
+                        averageXPoints[j] = [windingFrequency, averageX];
+                        averageYPoints[j] = [windingFrequency, averageY];
+                    }
+                }
+
+                let currentWindingFrequencyMarker = getAmplitudes(wavePoints, polarGraph.windingFrequency, xMax - xMin);
+
+                waveGraph.drawPoints(wavePoints, color);
+                averageXGraph.drawPoints(averageXPoints, color);
+                averageYGraph.drawPoints(averageYPoints, color);
+                polarGraph.drawPoints(polarPoints, color);
+
+                waveGraph.drawMarkers(waveMarkers, 5, color);
+                averageXGraph.drawMarkers([[polarGraph.windingFrequency, currentWindingFrequencyMarker[0]]], 5, color);
+                averageYGraph.drawMarkers([[polarGraph.windingFrequency, currentWindingFrequencyMarker[1]]], 5, color);
+                polarGraph.drawMarkers(polarMarkers, 5, color);
+                polarGraph.drawMarkersCartesian([currentWindingFrequencyMarker], 5, color);
+            }
+        }
+
+        function getAmplitudes(points, windingFrequency, xRange = 1) {
+            let xPoints = [];
+            let yPoints = [];
+
+            for (let i = 0; i < points.length; i++) {
+                let point = points[i];
+
+                let x = point[0];
+                let y = point[1];
+
+                xPoints[i] = [x, Math.cos(x * windingFrequency) * y];
+                yPoints[i] = [x, Math.sin(x * windingFrequency) * y];
+            }
+
+            let xArea = getArea(xPoints);
+            let yArea = getArea(yPoints);
+            
+            let xAverage = xArea / xRange;
+            let yAverage = yArea / xRange;
+
+            return [xAverage, yAverage];
+        }
+
+        function getArea(points) {
+            let area = 0;
+
+            for (let i = 0; i < points.length - 1; i++) {
+                let point1 = points[i];
+                let point2 = points[i + 1];
+
+                let deltaX = point2[0] - point1[0];
+
+                let triangleArea = (point2[1] - point1[1]) * deltaX / 2;
+                let rectangleArea = point1[1] * deltaX;
+
+                area += triangleArea + rectangleArea;
+            }
+
+            return area;
+        }
+    </script>
+</body>
+</html>

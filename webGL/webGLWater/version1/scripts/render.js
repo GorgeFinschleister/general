@@ -14,7 +14,7 @@ function drawWater(gl) {
     let programInfo = getShaderProgram(gl, waterVert, waterFrag, waterAttributeObject);
     finaliseProgram(programInfo, waterAttributeObject);
     
-    setUniforms(gl, programInfo, data1f, data3fv, data4fv, dataMat4);
+    setUniforms(gl, programInfo, data1f, data2fv, data3fv, data4fv, dataMat4);
 
     gl.drawArrays(gl.TRIANGLES, 0, waterAttributeObject.vertexCount);
 
@@ -25,7 +25,7 @@ function drawSky(gl) {
     let programInfo = getShaderProgram(gl, skyVert, skyFrag, skyAttributeObject);
     finaliseProgram(programInfo, skyAttributeObject);
 
-    setUniforms(gl, programInfo, data1f, data3fv, data4fv, dataMat4);
+    setUniforms(gl, programInfo, data1f, data2fv, data3fv, data4fv, dataMat4);
 
     gl.drawArrays(gl.TRIANGLES, 0, skyAttributeObject.vertexCount);
 

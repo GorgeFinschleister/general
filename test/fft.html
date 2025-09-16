@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: none;
+            overflow-y: hidden;
+        }
+    </style>
+</head>
+<body onload="onload()"> 
+    <canvas id="canvas" style="width: 100vw; height: 100vh;"></canvas>
+
+    <script src="../util/classPackage.js"></script>
+    <script src="../util/utilFunctions.js"></script>
+
+    <script>
+        let canvas = document.getElementById('canvas');
+        let ctx = canvas.getContext('2d');
+
+        let loop;
+        let tickRate = 16;
+        let tick = 0;
+
+        let circleCenterX;
+        let circleRadius;
+
+        let waveGraphCenterX;
+        let waveGraphCenterY;
+        let waveGraphWidth;
+        let waveGraphHeight;
+
+        let avgXGraphCenterX;
+        let avgXGraphCenterY;
+        let avgXGraphWidth;
+        let avgXGraphHeight;
+
+        let avgYGraphCenterX;
+        let avgYGraphCenterY;
+        let avgYGraphWidth;
+        let avgYGraphHeight;
+
+        let scale = 100;
+        let speed = 0;
+        let markerSpeed = 1;
+        let windingSpeed = 1;
+        let windingSpeedBounds = 5;
+        let windingSpeedSpeed = 0.01;
+        let arcMarkerRadius = 5;
+
+        let waves = [
+            (x) => {
+                return Math.sin(1 * x);
+            },
+            (x) => {
+                return Math.sin(2 * x);
+            },
+        ];
+
+        let colors = ["rgba(0,0,255,1)", "rgba(255,0,0,0)", "green"];
+        let summedColor = ["rgba(0,0,0,0)"];
+
+        let pathsAvgX = [];
+        let pathsAvgY = [];
+
+        function onload() {
+            try {
+                Terminal.init();
+
+                setup();
+                startLoop();
+
+            } catch (error) {
+                alert(error.stack);
+            }
+        }
+
+        function setup() {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+
+            ctx.translate(0, canvas.height / 2);
+
+            circleCenterX = canvas.width / 6;
+            circleRadius = 75;
+            
+            waveGraphWidth = 750;
+            scale = waveGraphWidth / (4 * Math.PI);
+            waveGraphHeight = scale;
+            waveGraphCenterX = canvas.width - (canvas.width - circleCenterX * 2) / 2;
+            waveGraphCenterY = canvas.width / -8;
+
+            avgXGraphWidth = 400;
+            avgXGraphHeight = scale * 2;
+            avgXGraphCenterX = circleCenterX * 2 + (canvas.width - waveGraphCenterX) / 2;
+            avgXGraphCenterY = canvas.height / 4;
+
+            avgYGraphWidth = 400;
+            avgYGraphHeight = scale * 2;
+            avgYGraphCenterX = canvas.width - (canvas.width - waveGraphCenterX) / 2;
+            avgYGraphCenterY = canvas.height / 4;
+
+            for (let i = 0; i < waves.length; i++) {
+                colors[i] = colors[i % colors.length];
+            }
+
+            if (colors.length > waves.length) {
+                colors = colors.slice(0, waves.length);
+            }
+
+            colors.push(summedColor);
+            waves.push((x) => {
+                let sum = 0;
+
+                for (let i = 0; i < waves.length - 1; i++) {
+                    sum += waves[i](x);
+                }
+
+                return sum;
+            });
+
+            for (let i = 0; i < waves.length; i++) {
+                pathsAvgX[i] = new Path2D();
+                pathsAvgX[i].moveTo(avgXGraphCenterX - avgXGraphWidth / 2, avgXGraphCenterY);
+
+                pathsAvgY[i] = new Path2D();
+                pathsAvgY[i].moveTo(avgYGraphCenterX - avgYGraphWidth / 2, avgYGraphCenterY);
+            }
+        }
+
+        function startLoop() {
+            loop = setInterval(function() {
+                try {
+                    update();
+                    draw();
+                    Terminal.hide();
+                } catch (error) {
+                    Terminal.error(error);
+                }
+            }, tickRate);
+        }
+
+        function update() {
+            tick++;
+        }
+
+        function draw() {
+            ctx.clearRect(0, canvas.height / -2, canvas.width, canvas.height);
+
+            drawCircle();
+            drawGraph();
+            drawDividers();
+            drawWaves();
+        }
+
+        function drawCircle() {
+            ctx.beginPath();
+            ctx.arc(circleCenterX, 0, circleRadius, 0, Math.PI * 2, false);
+            ctx.stroke();
+        }
+
+        function drawGraph() {
+            ctx.beginPath();
+            ctx.moveTo(waveGraphCenterX - waveGraphWidth / 2, waveGraphCenterY);
+            ctx.lineTo(waveGraphCenterX + waveGraphWidth / 2, waveGraphCenterY);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(waveGraphCenterX, waveGraphCenterY - waveGraphHeight);
+            ctx.lineTo(waveGraphCenterX, waveGraphCenterY + waveGraphHeight);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(avgXGraphCenterX - avgXGraphWidth / 2, avgXGraphCenterY);
+            ctx.lineTo(avgXGraphCenterX + avgXGraphWidth / 2, avgXGraphCenterY);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(avgXGraphCenterX - avgXGraphWidth / 2, avgXGraphCenterY - avgXGraphHeight);
+            ctx.lineTo(avgXGraphCenterX - avgXGraphWidth / 2, avgXGraphCenterY + avgXGraphHeight);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(avgYGraphCenterX - avgYGraphWidth / 2, avgYGraphCenterY);
+            ctx.lineTo(avgYGraphCenterX + avgYGraphWidth / 2, avgYGraphCenterY);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(avgYGraphCenterX - avgYGraphWidth / 2, avgYGraphCenterY - avgYGraphHeight);
+            ctx.lineTo(avgYGraphCenterX - avgYGraphWidth / 2, avgYGraphCenterY + avgYGraphHeight);
+            ctx.stroke();
+        }
+
+        function drawDividers() {
+            ctx.beginPath();
+            ctx.moveTo(circleCenterX * 2, canvas.height / -2);
+            ctx.lineTo(circleCenterX * 2, canvas.height / 2);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(circleCenterX * 2, 0);
+            ctx.lineTo(canvas.width, 0);
+            ctx.stroke();
+        }
+
+        function drawWaves() {
+            let pathsCircle = [];
+            let pathsWaveGraph = [];
+
+            let marker = markerSpeed == 0 ? 0 : ((tick * markerSpeed) % waveGraphWidth - waveGraphWidth / 2) << 0;
+            let windingSpeed1 = (windingSpeed + tick * windingSpeedSpeed) % windingSpeedBounds;
+
+            if (windingSpeed1 == 0) {
+                for (let i = 0; i < waves.length; i++) {
+                    pathsAvgX[i] = new Path2D();
+                    pathsAvgX[i].moveTo(avgXGraphCenterX - avgXGraphWidth / 2, avgXGraphCenterY);
+
+                    pathsAvgY[i] = new Path2D();
+                    pathsAvgY[i].moveTo(avgYGraphCenterX - avgYGraphWidth / 2, avgYGraphCenterY);
+                }
+            }
+
+            for (let i = 0; i < waves.length; i++) {
+                let newPathCircle = new Path2D();
+                let newPathGraph = new Path2D();
+
+                newPathCircle.moveTo(circleCenterX, 0);
+                newPathGraph.moveTo(waveGraphCenterX - waveGraphWidth / 2, 0);
+
+                pathsCircle[i] = newPathCircle;
+                pathsWaveGraph[i] = newPathGraph;
+            }
+
+            for (let i = 0; i < waves.length; i++) {
+                let waveFunction = waves[i];
+                let pathCircle = pathsCircle[i];
+                let pathWaveGraph = pathsWaveGraph[i];
+
+                let avgX = 0;
+                let avgY = 0;
+
+                for (let j = (waveGraphWidth / -2) << 0; j < waveGraphWidth / 2; j++) {
+                    let val = waveFunction((j + tick * speed) / scale);
+
+                    let rotX = -Math.cos(j * windingSpeed1 / scale);
+                    let rotY = -Math.sin(j * windingSpeed1 / scale);
+
+                    let x1 = circleRadius * val * rotX + circleCenterX;
+                    let y1 = circleRadius * val * rotY;
+                    let x2 = waveGraphCenterX + j;
+                    let y2 = waveGraphCenterY + waveGraphHeight * val;
+
+                    avgX += x1 - circleCenterX;
+                    avgY += y1;
+
+                    if (j == (waveGraphWidth / -2) << 0) {
+                        pathCircle.moveTo(x1, y1);
+                        pathWaveGraph.moveTo(x2, y2);
+                    }
+
+                    pathCircle.lineTo(x1, y1);
+                    pathWaveGraph.lineTo(x2, y2);   
+                    
+                    if (j == marker) {
+                        pathCircle.moveTo(x1 + arcMarkerRadius, y1);
+                        pathCircle.arc(x1, y1, arcMarkerRadius, 0, Math.PI * 2, false);
+                        pathCircle.moveTo(x1, y1);
+
+                        pathWaveGraph.moveTo(x2 + arcMarkerRadius, y2);
+                        pathWaveGraph.arc(x2, y2, arcMarkerRadius, 0, Math.PI * 2, false);
+                        pathWaveGraph.moveTo(x2, y2);
+                    }
+                }
+
+                avgX /= waveGraphWidth;
+                avgY /= waveGraphWidth;
+
+                pathCircle.moveTo(circleCenterX + avgX + arcMarkerRadius, avgY);
+                pathCircle.arc(circleCenterX + avgX, avgY, arcMarkerRadius, 0, Math.PI * 2, false);
+
+                pathsAvgX[i].lineTo(avgXGraphCenterX - avgXGraphWidth / 2 + windingSpeed1 / windingSpeedBounds * avgXGraphWidth, avgXGraphCenterY + avgX / circleRadius * avgXGraphHeight);
+                pathsAvgY[i].lineTo(avgYGraphCenterX - avgYGraphWidth / 2 + windingSpeed1 / windingSpeedBounds * avgYGraphWidth, avgYGraphCenterY + avgY / circleRadius * avgYGraphHeight);
+            }
+
+            for (let i = 0; i < pathsCircle.length; i++) {
+                let pathCircle = pathsCircle[i];
+                let pathWaveGraph = pathsWaveGraph[i];
+                let color = colors[i % colors.length];
+                
+                ctx.strokeStyle = color;
+                ctx.fillStyle = color;
+                
+                ctx.stroke(pathCircle);
+                ctx.stroke(pathWaveGraph);
+            }
+
+            for (let i = 0; i < pathsAvgX.length; i++) {
+                let pathAvgX = pathsAvgX[i];
+                let pathAvgY = pathsAvgY[i];
+                let color = colors[i % colors.length];
+                
+                ctx.strokeStyle = color;
+                ctx.fillStyle = color;
+
+                ctx.stroke(pathAvgX);
+                ctx.stroke(pathAvgY);
+            }
+
+            ctx.strokeStyle = "black";
+            ctx.fillStyle = ctx.strokeStyle;
+        }
+
+        function waveValue(x) {
+            return Math.sin(x);
+        }
+    </script>
+</body>
+</html>

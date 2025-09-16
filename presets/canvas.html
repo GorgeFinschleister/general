@@ -24,17 +24,23 @@
         let ctx = canvas.getContext('2d');
 
         function onload() {
+            Terminal.init();
+
             try {
                 setup();
-
+                start();
             } catch (error) {
-                alert(error.stack);
+                Terminal.error(error);
             }
         }
 
         function setup() {
             canvas.width = canvas.clientWidth;
             canvas.height = canvas.clientHeight;
+        }
+
+        function start() {
+            
         }
     </script>
 </body>

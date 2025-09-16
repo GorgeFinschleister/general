@@ -76,12 +76,17 @@ function finaliseProgram(programInfo, attributeObject) {
     gl.useProgram(programInfo.program);
 }
 
-function setUniforms(gl, programInfo, data1f, data3fv, data4fv, dataMat4) {
+function setUniforms(gl, programInfo, data1f, data2fv, data3fv, data4fv, dataMat4) {
     let shaderProgram = programInfo.program;
 
     Object.keys(data1f).forEach((key) => {
         const uniformLocation = gl.getUniformLocation(shaderProgram, key);
         gl.uniform1f(uniformLocation, data1f[key]);
+    });
+
+    Object.keys(data2fv).forEach((key) => {
+        const uniformLocation = gl.getUniformLocation(shaderProgram, key);
+        gl.uniform2fv(uniformLocation, data2fv[key].array());
     });
 
     Object.keys(data3fv).forEach((key) => {
@@ -125,6 +130,41 @@ function loadShader(gl, type, source) {
     return shader;
 }
 
+function loadURLTexture(gl, url) {
+    const level = 0;
+    const internalFormat = gl.RGBA;
+    const srcFormat = gl.RGBA;
+    const srcType = gl.UNSIGNED_BYTE;
+    
+    const image = new Image();
+    image.onload = () => {
+        const texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(
+            gl.TEXTURE_2D,
+            level,
+            internalFormat,
+            srcFormat,
+            srcType,
+            image,
+        );
+
+        if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
+            gl.generateMipmap(gl.TEXTURE_2D);
+        } else {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        }
+    };
+    
+    image.src = url;
+
+    function isPowerOf2(value) {
+    return (value & (value - 1)) === 0;
+}
+}
+
 function loadRGBATexture(gl, width, height, textureArray) {
     const level = 0;
     const internalFormat = gl.RGBA;
@@ -153,6 +193,26 @@ function loadR8Texture(gl, width, height, textureArray) {
     const srcType = gl.UNSIGNED_BYTE;
 
     loadTexture(gl, level, internalFormat, width, height, border, srcFormat, srcType, textureArray);
+}
+
+function loadTextureImage(gl, texture, level, internalFormat, srcFormat, srcType, image) {
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(
+        gl.TEXTURE_2D,
+        level,
+        internalFormat,
+        srcFormat,
+        srcType,
+        image,
+    );
+
+    if ((image.width && (image.width - 1)) === 0 && (image.height && (image.height - 1)) === 0) {
+        gl.generateMipmap(gl.TEXTURE_2D);
+    } else {
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    }
 }
 
 function loadTexture(gl, level, internalFormat, width, height, border, srcFormat, srcType, textureArray) {

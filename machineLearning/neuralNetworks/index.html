@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body onload="onload()">
+    <button onclick="train()">Train</button>
+    <button onclick="test()">Test</button>
+    <br>
+    <button onclick="resetNetwork()">Reset Network</button>
+    <br>
+    <label>Add Training Data</label>
+    <input type="file" accept=".txt, .csv" oninput="loadData(this.files[0], true)">
+    <br>
+    <label>Add Testing Data</label>
+    <input type="file" accept=".txt, .csv" oninput="loadData(this.files[0], false)">
+
+    <script src="../../../util/classPackage.js"></script>
+    <script src="../../../util/utilFunctions.js"></script>
+
+    <script src="./index.js"></script>
+</body>
+</html>

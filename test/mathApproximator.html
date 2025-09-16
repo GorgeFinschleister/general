@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body onload="onload()">
+    <script src="../util/classPackage.js"></script>
+
+    <script>
+        function onload() {
+            Terminal.init();
+
+            try {
+                start();
+            } catch (error) {
+                Terminal.error(error);
+            }
+        }
+
+        class MathApproximator {
+            constructor(datapoints, start = 0, stepSize = 1, numIntegerPoints = datapoints.length * stepSize) {
+                this.datapoints = datapoints;
+                this.start = start;
+                this.stepSize = stepSize;
+                this.numIntegerPoints = numIntegerPoints;
+            }
+
+            getApproximateDerivative(x) {
+                x = Math.floor((x - this.start) / this.stepSize);
+
+                if (x < 0 || x > this.datapoints.length - 2) {
+                    return;
+                }
+
+                return (this.datapoints[x + 1] - this.datapoints[x]) / this.stepSize;
+            }
+
+            getApproximateIntegral(x1, x2) {
+                let sum = 0;
+
+                x1 = Math.floor((x1 - this.start) / this.stepSize);
+                x2 = Math.floor((x2 - this.start) / this.stepSize);
+
+                if (x1 < 0 || x2 > this.datapoints.length - 2) {
+                    return;
+                }
+
+                for (let i = x1; i < x2; i++) {
+                    let point1 = this.datapoints[i];
+                    let point2 = this.datapoints[i + 1];
+
+                    let difference = point2 - point1;
+
+                    let triangleArea = difference * this.stepSize / 2;
+                    let rectangleArea = point1 * this.stepSize;
+
+                    sum += triangleArea + rectangleArea;
+                }
+
+                return sum;
+            }
+        }
+
+        let stepSize = 0.01;
+        let numIntegerPoints = 11;
+        let datapoints = Array.from(new Array(numIntegerPoints / stepSize)).map((x, i) => {return Math.sin(i * stepSize)});
+
+        function start() {
+            let approximator = new MathApproximator(datapoints, 0, stepSize, numIntegerPoints);
+
+            let sum = approximator.getApproximateIntegral(0, 10);
+            let derivative = approximator.getApproximateDerivative(1);
+
+            Terminal.print(sum);
+            Terminal.print(derivative);
+        }
+    </script>
+</body>
+</html>

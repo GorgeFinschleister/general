@@ -2,11 +2,11 @@
 #extraDataNum,0
 #extraDataFilter
 #inputs,1
-#inputsNum,4
-#inputsFilter,1,1,1,1
+#inputsNum,5
+#inputsFilter,0,0,1,0,1
 #outputs,1
-#outputsNum,2
-#outputsFilter,1,1
+#outputsNum,1
+#outputsFilter,1
 Age,Sex,BP,Cholesterol,Na_to_K,Drug
 23,F,HIGH,HIGH,25.355,drugY
 47,M,LOW,HIGH,13.093,drugC

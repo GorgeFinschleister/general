@@ -8,7 +8,8 @@ in vec3 vViewPosition;
 
 layout(location = 0) out vec4 fragColor;
 
-uniform vec4 uSkyColor;
+uniform vec4 uSkyColorDay;
+uniform vec4 uSkyColorNight;
 uniform vec4 uCloudColor;
 uniform vec4 uSunColor;
 uniform mat4 uModelViewMatrix;
@@ -17,6 +18,7 @@ uniform vec3 uCloudDirection;
 
 uniform float uTick;
 
+uniform vec3 uSunPosition;
 uniform vec3 uSunViewPosition;
 uniform float uSunBodyCoefficient;
 uniform float uSunBodyExponent;
@@ -42,7 +44,25 @@ float random(vec3 seed) {
     return fract(sin(dot(seed , vec3(12.9898, 78.233, 45.164))) * 43758.5453);
 }
 
-float getCloudValue(vec3 position) {
+float getValueNoise(vec2 position) {
+    float x = position.x;
+    float y = position.y;
+    float frx = fract(x);
+    float fry = fract(y);
+    float fx = x - frx;
+    float fy = y - fry;
+    float cx = fx + 1.0;
+    float cy = fy + 1.0;
+
+    float lerped1_1 = mix(random(vec3(fx, fy, 1.0)), random(vec3(cx, fy, 1.0)), sstep(frx));
+    float lerped2_1 = mix(random(vec3(fx, cy, 1.0)), random(vec3(cx, cy, 1.0)), sstep(frx));
+
+    float lerped1_2 = mix(lerped1_1, lerped2_1, sstep(fry));
+    
+    return lerped1_2;
+}
+
+float getValueNoise(vec3 position) {
     float x = position.x;
     float y = position.y;
     float z = position.z;
@@ -72,6 +92,8 @@ float getCloudValue(vec3 position) {
 float getLayeredCloudValue(vec3 position) {
     position += uCloudSpeed * uTick * uCloudDirection;
 
+    vec2 position1 = vec2(position.x, position.z) * 100.0;
+
     const int iterations = 5;
     float frequency = uCloudFrequency;
     float frequencyCoefficient = 1.5;
@@ -81,16 +103,30 @@ float getLayeredCloudValue(vec3 position) {
     float cloudValue = 0.0;
 
     for (int i = 0; i < iterations; i++) {
-        cloudValue += amplitude * getCloudValue(position * frequency);
+        cloudValue += amplitude * getValueNoise(position * frequency);
 
         frequency *= uCloudFrequencyCoefficient;
         amplitude *= uCloudAmplitudeCoefficient;
     }
 
     float finalCloudValue = getAdjustedLightValue(cloudValue, uCloudCoefficient, uCloudExponent);
-    finalCloudValue *= max(0.0, dot(normalize(position), vec3(0.0, 1.0, 0.0)));
+    //finalCloudValue *= max(0.0, dot(normalize(position), vec3(0.0, 1.0, 0.0)));
 
     return finalCloudValue;
+}
+
+vec4 getSkyColor(vec3 position, vec3 sunPosition) {
+    float sunAngle = dot(normalize(position), normalize(sunPosition)) * 0.5 + 0.5;
+
+    float positionDot = clamp(dot(normalize(sunPosition), normalize(position)) * 0.5 + 0.5, 0.0, 1.0);
+
+    float wavelengthMin = 380.0;
+    float wavelengthMax = 750.0;
+    float wavelength = wavelengthMin + (wavelengthMax - wavelengthMin) * sunAngle;
+
+    vec4 skyColor = mix(uSkyColorNight, uSkyColorDay, sunAngle);
+
+    return skyColor;
 }
 
 void main() {
@@ -99,8 +135,8 @@ void main() {
     float cloudValue = getLayeredCloudValue(vPosition);
 
     vec4 cloudColor = uCloudColor * cloudValue;
-    vec4 skyColor = uSkyColor * (vec4(1.0) - cloudColor);
     vec4 sunColor = uSunColor * distanceToSunCoefficient;
+    vec4 skyColor = getSkyColor(vPosition, uSunPosition) * (vec4(1.0) - cloudColor - sunColor);
 
     vec4 finalColor = cloudColor + skyColor + sunColor;
 

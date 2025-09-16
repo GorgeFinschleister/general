@@ -31,7 +31,7 @@ uniform float uWaveAmplitudeCoefficient;
 
 const int iterations = 20;
 const int numDirections = 20;
-const float directions[numDirections] = float[numDirections](0.44345, 0.64041, 0.65973, 0.05262, 0.27399, 0.487, 0.7316, 0.54246, 0.43524, 0.68831, 0.05589, 0.82248, 0.44419, 0.4753, 0.64882, 0.62044, 0.40697, 0.81248, 0.84478, 0.08581);
+const float directions[numDirections] = float[numDirections](0.0578, 0.30791, 0.75709, 0.47779, 0.1735, 0.4324, 0.61367, 0.45316, 0.22213, 0.54967, 0.32037, 0.27197, 0.84127, 0.76328, 0.85567, 0.60643, 0.83696, 0.83801, 0.09466, 0.61066);
 
 WaveData getWaveData(vec4 position) {
     float offset = 0.0;
@@ -46,16 +46,16 @@ WaveData getWaveData(vec4 position) {
     float tickBySpeed = uTick * uWaveSpeed;
 
     for (int i = 0; i < iterations; i++) {
-        float directionAngle = directions[i] * 6.28318530718;
+        float directionAngle = directions[i] * 6.28;
         vec2 direction = vec2(cos(directionAngle), sin(directionAngle));
 
         float positionDirectionDot = dot(positionVec2, direction) * frequency;
 
         float waveValue = amplitude * exp(sin(positionDirectionDot + tickBySpeed) - 1.0);
-        float waveValueDerivativeX = amplitude * frequency * direction.x * exp(sin(positionDirectionDot + tickBySpeed) - 1.0) * cos(positionDirectionDot + tickBySpeed);
-        float waveValueDerivativeZ = amplitude * frequency * direction.y * exp(sin(positionDirectionDot + tickBySpeed) - 1.0) * cos(positionDirectionDot + tickBySpeed);
+        float waveValueDerivativeX = amplitude * frequency * direction.x * exp(cos(positionDirectionDot + tickBySpeed) - 1.0) * cos(positionDirectionDot + tickBySpeed);
+        float waveValueDerivativeZ = amplitude * frequency * direction.y * exp(cos(positionDirectionDot + tickBySpeed) - 1.0) * cos(positionDirectionDot + tickBySpeed);
 
-        positionVec2 += prevDerivative;
+        positionVec2 += prevDerivative * 100.0;
 
         vec2 derivative = vec2(waveValueDerivativeX, waveValueDerivativeZ);
 
@@ -77,45 +77,13 @@ WaveData getWaveData(vec4 position) {
 
     return returnData;
 }
-WaveData getWaveData1(vec4 position) {
-    float offset = 0.0;
-    float derivativeX = 0.0;
-    float derivativeZ = 0.0;
 
-    vec2 positionVec2 = position.xz;
-    
-    float frequency = uWaveFrequency;
-    float amplitude = uWaveAmplitude;
+float X(float x, float n) {
+    return mod(x, n);
+}
 
-    float tickBySpeed = uTick * uWaveSpeed;
-
-    for (int i = 0; i < iterations; i++) {
-        float directionAngle = directions[i] * 6.28;
-        vec2 direction = vec2(-cos(directionAngle), sin(directionAngle));
-
-        float positionDirectionDot = dot(positionVec2, direction) * frequency;
-
-        float waveValue = sin(positionDirectionDot + tickBySpeed);
-        float waveValueDerivativeX = amplitude * frequency * direction.x * cos(positionDirectionDot + tickBySpeed);
-        float waveValueDerivativeZ = amplitude * frequency * direction.y * cos(positionDirectionDot + tickBySpeed);
-
-        offset += waveValue;
-        derivativeX += waveValueDerivativeX;
-        derivativeZ += waveValueDerivativeZ;
-
-        frequency *= uWaveFrequencyCoefficient;
-        amplitude *= uWaveAmplitudeCoefficient;
-    }
-
-    vec3 dx = normalize(vec3(1.0, derivativeX, 0.0));
-    vec3 dz = normalize(vec3(0.0, derivativeZ, 1.0));
-    vec3 normal = normalize(cross(dz, dx));
-
-    vec4 offsetVec = vec4(0.0, offset, 0.0, 0.0);
-
-    WaveData returnData = WaveData(offsetVec, normal);
-
-    return returnData;
+float Y(float y, float n) {
+    return -1.0 * floor(y/n) / n;
 }
 
 void main() {
@@ -123,9 +91,12 @@ void main() {
 
     vec4 position = aVertexPosition + waveData.offset;
 
+    float seafoamCoefficient = pow(length(waveData.offset) / (uWaveAmplitude + pow(uWaveAmplitudeCoefficient, float(iterations))), 4.0) * 0.003;
+    vec4 seafoamColor = vec4(1.0) * seafoamCoefficient;
+
     vPosition = position.xyz;
     vViewPosition = (uModelViewMatrix * position).xyz;
-    vColor = uWaterColor;
+    vColor = uWaterColor + seafoamColor;
     vWaveOffset = waveData.offset.xyz;
     vNormal = waveData.normal;
     vRotatedNormal = (uModelViewMatrix * vec4(waveData.normal, 0.0)).xyz;

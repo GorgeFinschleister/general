@@ -44,6 +44,7 @@ class Terminal {
         el.style.position = "fixed";
         el.style.overflow = "hidden hidden";
         el.style.border = "1px solid";
+        el.style.fontFamily = "\"Courier New\", Courier, monospace"
 
         Terminal.el = el;
     }
@@ -356,8 +357,8 @@ class Benchmarker {
     }
 
     toString(precision = 20) {
-        let averageRelativeTime = parseFloat(this.averageRelativeTime().toFixed(precision));
-        let fromInitialization = parseFloat(this.fromInitialization().toFixed(precision));
+        let averageRelativeTime = this.averageRelativeTime(precision);
+        let fromInitialization = this.fromInitialization(precision);
 
         return "~~ Benchmarker ~~\n   Name: " + this.name + "\n   Average Relative Time: " + averageRelativeTime + "\n   Total Time: " + fromInitialization;
     }
@@ -390,12 +391,12 @@ class Benchmarker {
         this.benchmarks.push(newBenchmark);
     }
 
-    averageAbsoluteTime() {
-        return this.totalAbsoluteTime() / this.benchmarks.length;
+    averageAbsoluteTime(precision = 20) {
+        return parseFloat((this.totalAbsoluteTime() / this.benchmarks.length).toFixed(precision));
     }
 
-    averageRelativeTime() {
-        return this.totalRelativeTime() / this.benchmarks.length;
+    averageRelativeTime(precision = 20) {
+        return parseFloat((this.totalRelativeTime() / this.benchmarks.length).toFixed(precision));
     }
 
     totalRelativeTime() {
@@ -496,14 +497,14 @@ class Matrix {
         return newMatrix;
     }
 
-    static random(rows, columns) {
+    static random(rows, columns, min = 0, max = 1) {
         let arr = [];
 
         for (let i = 0; i < rows; i++) {
             let row = [];
 
             for (let j = 0; j < columns; j++) {
-                row[j] = Math.random();
+                row[j] = Math.random() * (max - min) + min;
             }
 
             arr[i] = row;
@@ -660,6 +661,32 @@ class Matrix {
         return newMatrix;
     }
 
+    static random(rows, columns) {
+        let arr = [];
+
+        for (let i = 0; i < rows; i++) {
+            let row = [];
+
+            for (let j = 0; j < columns; j++) {
+                row[j] = Math.random();
+            }
+
+            arr[i] = row;
+        }
+
+        let newMatrix = Matrix.from(rows, columns, arr);
+
+        return newMatrix;
+    }
+
+    get shape() {
+        return [this.rows, this.columns];
+    }
+
+    get T() {
+        return this.transposed();
+    }
+
     valueOf() {
         return this.matrix;
     }
@@ -683,6 +710,10 @@ class Matrix {
     reshape(rows, columns = rows) {
         let flattened = this.flat();
         let flattenedLength = flattened.length;
+
+        if (rows == -1) {
+            return Matrix.from(1, flattenedLength, [flattened]);
+        }
 
         this.rows = rows;
         this.columns = columns;
@@ -714,15 +745,16 @@ class Matrix {
         let rows1 = this.rows;
         let columns1 = this.columns;
         let rows2 = src.length;
-        let columns2 = src[0].length; 
 
         let arr = [];
 
         for (let i = 0; i < rows1; i++) {
             let row = [];
+            let srcRow = src[i % rows2];
+            let columns2 = srcRow.length;
 
             for (let j = 0; j < columns1; j++) {
-                row[j] = src[i % rows2][j % columns2];
+                row[j] = srcRow[j % columns2];
             }
 
             arr[i] = row;
@@ -828,10 +860,12 @@ class Matrix {
 
         for (let i = 0; i < rows1; i++) {
             let row = [];
+            let srcRow1 = src1[i];
+            let srcRow2 = src2[i % rows2];
 
             for (let j = 0; j < columns1; j++) {
-                let val1 = src1[i][j];
-                let val2 = src2[i % rows2][j % columns2];
+                let val1 = srcRow1[j];
+                let val2 = srcRow2[j % columns2];
 
                 row[j] = val1 + val2;
             }
@@ -856,10 +890,12 @@ class Matrix {
 
         for (let i = 0; i < rows1; i++) {
             let row = [];
+            let srcRow1 = src1[i];
+            let srcRow2 = src2[i % rows2];
 
             for (let j = 0; j < columns1; j++) {
-                let val1 = src1[i][j];
-                let val2 = src2[i % rows2][j % columns2];
+                let val1 = srcRow1[j];
+                let val2 = srcRow2[j % columns2];
 
                 row[j] = val1 - val2;
             }
@@ -884,10 +920,12 @@ class Matrix {
 
         for (let i = 0; i < rows1; i++) {
             let row = [];
+            let srcRow1 = src1[i];
+            let srcRow2 = src2[i % rows2];
 
             for (let j = 0; j < columns1; j++) {
-                let val1 = src1[i][j];
-                let val2 = src2[i % rows2][j % columns2];
+                let val1 = srcRow1[j];
+                let val2 = srcRow2[j % columns2];
 
                 row[j] = val1 * val2;
             }
@@ -912,10 +950,12 @@ class Matrix {
 
         for (let i = 0; i < rows1; i++) {
             let row = [];
+            let srcRow1 = src1[i];
+            let srcRow2 = src2[i % rows2];
 
             for (let j = 0; j < columns1; j++) {
-                let val1 = src1[i][j];
-                let val2 = src2[i % rows2][j % columns2];
+                let val1 = srcRow1[j];
+                let val2 = srcRow2[j % columns2];
 
                 row[j] = val1 / val2;
             }
@@ -929,25 +969,28 @@ class Matrix {
     }
 
     multiply(matrix2) {
-        let rows1 = this.rows;
         let columns1 = this.columns;
         let rows2 = matrix2.rows;
-        let columns2 = matrix2.columns;
 
         if (columns1 != rows2) {
             throw new Error('Inner dimensions not equivilent.');
         }
+
+        let rows1 = this.rows;
+        let columns2 = matrix2.columns;
 
         let src1 = this.matrix;
         let src2 = matrix2.matrix;
         let newMatrix = new Matrix(rows1, columns2);
 
         for (let r = 0; r < rows1; r++) {
+            let row = src1[r];
+
             for (let c = 0; c < columns2; c++) {
                 let sum = 0;
 
                 for (let n = 0; n < columns1; n++) {
-                    sum += src1[r][n] * src2[n][c];
+                    sum += row[n] * src2[n][c];
                 }
 
                 newMatrix.setValue(r, c, sum);
@@ -961,35 +1004,6 @@ class Matrix {
         return this.multiply(vector.toColumnMatrix()).columnToVector(0);
     }
 
-    divide(matrix2) {
-        let rows1 = this.rows;
-        let columns1 = this.columns;
-        let rows2 = matrix2.rows;
-        let columns2 = matrix2.columns;
-
-        if (columns1 != rows2) {
-            throw new Error('Inner dimensions not equivilent.');
-        }
-
-        let src1 = this.matrix;
-        let src2 = matrix2.inverse().matrix;
-        let newMatrix = new Matrix(rows1, columns2);
-
-        for (let r = 0; r < rows1; r++) {
-            for (let c = 0; c < columns2; c++) {
-                let sum = 0;
-
-                for (let n = 0; n < columns1; n++) {
-                    sum += src1[r][n] * src2[n][c];
-                }
-
-                newMatrix.setValue(r, c, sum);
-            }
-        }
-
-        return newMatrix;
-    }
-
     addNum(num) {
         let arr = [];
         let src = this.matrix;
@@ -999,9 +1013,10 @@ class Matrix {
 
         for (let i = 0; i < rows; i++) {
             let row = [];
+            let srcRow = src[i];
 
             for (let j = 0; j < columns; j++) {
-                let val = src[i][j];
+                let val = srcRow[j];
 
                 row[j] = val + num;
             }
@@ -1023,9 +1038,10 @@ class Matrix {
 
         for (let i = 0; i < rows; i++) {
             let row = [];
+            let srcRow = src[i];
 
             for (let j = 0; j < columns; j++) {
-                let val = src[i][j];
+                let val = srcRow[j];
 
                 row[j] = val - num;
             }
@@ -1047,9 +1063,10 @@ class Matrix {
 
         for (let i = 0; i < rows; i++) {
             let row = [];
+            let srcRow = src[i];
 
             for (let j = 0; j < columns; j++) {
-                let val = src[i][j];
+                let val = srcRow[j];
 
                 row[j] = val * num;
             }
@@ -1071,9 +1088,10 @@ class Matrix {
 
         for (let i = 0; i < rows; i++) {
             let row = [];
+            let srcRow = src[i];
 
             for (let j = 0; j < columns; j++) {
-                let val = src[i][j];
+                let val = srcRow[j];
 
                 row[j] = val / num;
             }
@@ -1131,7 +1149,7 @@ class Matrix {
             arr[j] = column;
         }
 
-        let newMatrix = Matrix.from(rows, columns, arr);
+        let newMatrix = Matrix.from(columns, rows, arr);
 
         return newMatrix;
     }
@@ -1249,9 +1267,10 @@ class Matrix {
 
         for (let i = 0; i < rows; i++) {
             let row = [];
+            let srcRow = src[i];
 
             for (let j = 0; j < columns; j++) {
-                let el = src[i][j];
+                let el = srcRow[j];
                 let val = fn(el, i, j);
 
                 row[j] = val;
@@ -1381,6 +1400,10 @@ class Matrix {
         return newMatrix;
     }
 
+    log() {
+        return this.map(Math.log);
+    }
+
     reciprocal() {
         let arr = [];
         let src = this.matrix;
@@ -1422,7 +1445,7 @@ class Matrix {
             }
 
             if (keepDims) {
-                return Matrix.from(rows, columns, [[sum]]);
+                return sum;
             } else {
                 return Matrix.from(1, 1, [[sum]]);
             }
@@ -1636,6 +1659,38 @@ class Vector2 {
     constructor(x = 0, y = x) {
         this.x = x;
         this.y = y;
+    }
+
+    get xy() {
+        return new Vector2(this.x, this.y);
+    }
+
+    get yx() {
+        return new Vector2(this.y, this.x);
+    }
+
+    get 0() {
+        return this.x;
+    }
+
+    get 1() {
+        return this.y;
+    }
+
+    get r() {
+        return this.x;
+    }
+
+    get g() {
+        return this.y;
+    }
+
+    set r(r) {
+        this.x = r;
+    }
+
+    set g(g) {
+        this.y = g;
     }
 
     static value(value) {
@@ -1993,6 +2048,91 @@ class Vector3 {
         this.x = x;
         this.y = y;
         this.z = z;
+        this.length = 3;
+    }
+
+    get xy() {
+        return new Vector2(this.x, this.y);
+    }
+
+    get yx() {
+        return new Vector2(this.y, this.x);
+    }
+
+    get xz() {
+        return new Vector2(this.x, this.z);
+    }
+
+    get zx() {
+        return new Vector2(this.z, this.x);
+    }
+
+    get yz() {
+        return new Vector2(this.y, this.z);
+    }
+
+    get zy() {
+        return new Vector2(this.z, this.y);
+    }
+
+    get xyz() {
+        return new Vector3(this.x, this.y, this.z);
+    }
+
+    get xzy() {
+        return new Vector3(this.x, this.z, this.y);
+    }
+
+    get yxz() {
+        return new Vector3(this.y, this.x, this.z);
+    }
+
+    get yzx() {
+        return new Vector3(this.y, this.z, this.x);
+    }
+
+    get zxy() {
+        return new Vector3(this.z, this.x, this.y);
+    }
+
+    get zyx() {
+        return new Vector3(this.z, this.y, this.x);
+    }
+
+    get r() {
+        return this.x;
+    }
+
+    get g() {
+        return this.y;
+    }
+
+    get b() {
+        return this.z;
+    }
+
+    get 0() {
+        return this.x;
+    }
+
+    get 1() {
+        return this.y;
+    }
+
+    get 2() {
+        return this.z;
+    }
+
+    set r(r) {
+        this.x = r;
+    }
+
+    set g(g) {
+        this.y = g;
+    }
+
+    set b(b) {
+        this.z = b;
     }
 
     static random(min = 0, max = 1) {
@@ -2330,7 +2470,6 @@ class Vector3 {
         var z = v1.z;
 
         return new Vector3(xx * x + xy * y + xz * z, yx * x + yy * y + yz * z, zx * x + zy * y + zz * z).sum(origin);
-        return Matrix.rotation3D(rads.array()).multiply(v1.toColumnMatrix()).columnToVector(0).sum(origin);
     }
 
     unrotateRad(rads, origin = Vector3.neutral()) {
@@ -2446,6 +2585,38 @@ class Vector4 {
         this.y = y;
         this.z = z;
         this.w = w;
+    }
+
+    get r() {
+        return this.x;
+    }
+
+    get g() {
+        return this.y;
+    }
+
+    get b() {
+        return this.z;
+    }
+
+    get a() {
+        return this.w;
+    }
+
+    set r(r) {
+        this.x = r;
+    }
+
+    set g(g) {
+        this.y = g;
+    }
+
+    set b(b) {
+        this.z = b;
+    }
+
+    set a(a) {
+        this.w = a;
     }
 
     static value(value) {
@@ -3423,8 +3594,6 @@ class Noise {
         let permTableSize = this.permTableSize;
         let permTableSizeMin1 = permTableSize - 1;
 
-        let dot2 = this.dot2;
-
         let frequencies = this.frequencies;
         let amplitudes = this.amplitudes;
 
@@ -3991,5 +4160,415 @@ class KeyboardListener {
         this.keydown = keydown;
         this.keypress = keypress;
         this.keyup = keyup;
+    }
+}
+
+class GraphCartesian {
+    constructor({xMin = -5, xMax = 5, yMin = xMin, yMax = xMax, positionX = 0, positionY = 0, width = 500, height = 500, xScale = 1, yScale = xScale, xTicks = 3, xTickOffset = 5, yTicks = xTicks, yTickOffset = xTickOffset, axisColor = "black", graphColor = "blue"} = {}) {
+        this.changeXMinMax(xMin, xMax);
+        this.changeYMinMax(yMin, yMax);
+
+        this.positionX = positionX;
+        this.positionY = positionY;
+        this.width = width;
+        this.height = height;
+
+        this.xScale = xScale;
+        this.yScale = yScale;
+
+        this.axisColor = axisColor;
+        this.graphColor = graphColor;
+
+        this.xTicks = xTicks;
+        this.xTickOffset = xTickOffset;
+        this.yTicks = yTicks;
+        this.yTickOffset = yTickOffset;
+    }
+
+    changeXMinMax(xMin, xMax) {
+        this.xMin = xMin;
+        this.xMax = xMax;
+
+        this.xRange = this.xMax - this.xMin;
+    }
+
+    changeYMinMax(yMin, yMax) {
+        this.yMin = yMin;
+        this.yMax = yMax;
+
+        this.yRange = this.yMax - this.yMin;
+    }
+
+    drawAxes() {
+        ctx.strokeStyle = this.axisColor;
+
+        ctx.beginPath();
+        ctx.moveTo(this.getXPosition(this.xMin), this.getYPosition(0));
+        ctx.lineTo(this.getXPosition(this.xMax), this.getYPosition(0));
+        ctx.moveTo(this.getXPosition(0), this.getYPosition(this.yMin));
+        ctx.lineTo(this.getXPosition(0), this.getYPosition(this.yMax));
+        ctx.stroke();
+
+        ctx.globalAlpha = 0.25;
+
+        for (let i = 0; i < this.xTicks * 2 - 1; i++) {
+            let x = parseFloat(((i / (this.xTicks * 2 - 2)) * this.xRange + this.xMin).toPrecision(3));
+
+            let posX = this.getXPosition(x);
+
+            ctx.beginPath();
+            ctx.moveTo(posX, this.getYPosition(this.yMin));
+            ctx.lineTo(posX, this.getYPosition(this.yMax));
+            ctx.stroke();
+        }
+
+        for (let i = 0; i < this.yTicks * 2 - 1; i++) {
+            let y = parseFloat(((i / (this.yTicks * 2 - 2)) * this.yRange + this.yMin).toPrecision(3));
+
+            let posY = this.getYPosition(y);
+
+            ctx.beginPath();
+            ctx.moveTo(this.getXPosition(this.xMin), posY);
+            ctx.lineTo(this.getXPosition(this.xMax), posY);
+            ctx.stroke();
+        }
+
+        ctx.globalAlpha = 1;
+
+        for (let i = 0; i < this.xTicks; i++) {
+            let x = parseFloat(((i / (this.xTicks - 1)) * this.xRange + this.xMin).toPrecision(3));
+
+            let posX = this.getXPosition(x);
+            let posY = this.getYPosition(0);
+
+            ctx.beginPath();
+            ctx.moveTo(posX, posY - this.yScale * this.xTickOffset);
+            ctx.lineTo(posX, posY + this.yScale * this.xTickOffset);
+            ctx.stroke();
+
+            ctx.strokeText(x, posX - ctx.measureText(x).width / 2, posY + this.yScale * this.xTickOffset * 2);
+        }
+
+        for (let i = 0; i < this.yTicks; i++) {
+            let y = parseFloat(((i / (this.yTicks - 1)) * this.yRange + this.yMin).toPrecision(3));
+
+            let posX = this.getXPosition(0);
+            let posY = this.getYPosition(y);
+
+            ctx.beginPath();
+            ctx.moveTo(posX - this.xScale * this.yTickOffset, posY);
+            ctx.lineTo(posX + this.xScale * this.yTickOffset, posY);
+            ctx.stroke();
+
+            ctx.strokeText(y, posX + this.xScale * this.yTickOffset * 2, posY);
+        }
+    }
+
+    drawPoints(points, color = this.graphColor) {
+        ctx.strokeStyle = color;
+
+        let path = new Path2D();
+
+        for (let i = 0; i < points.length - 1; i++) {
+            let point1 = points[i];
+            let point2 = points[i + 1];
+
+            let x1 = this.getXPosition(point1[0]);
+            let y1 = this.getYPosition(point1[1]);
+            let x2 = this.getXPosition(point2[0]);
+            let y2 = this.getYPosition(point2[1]);
+
+            path.moveTo(x1, y1);
+            path.lineTo(x2, y2);
+        }
+
+        ctx.stroke(path);
+    }
+
+    getXPosition(x) {
+        return this.positionX + this.xScale * ((x - this.xMin) / this.xRange - 0.5) * this.width;
+    }
+
+    getYPosition(y) {
+        return this.positionY + this.yScale * ((y - this.yMin) / this.yRange - 0.5) * this.height;
+    }
+
+    drawMarkers(markers, markerRadius, color = this.graphColor) {
+        ctx.fillStyle = color;
+
+        for (let i = 0; i < markers.length; i++) {
+            let marker = markers[i];
+
+            let x = this.getXPosition(marker[0]);
+            let y = this.getYPosition(marker[1]);
+
+            ctx.beginPath();
+            ctx.arc(x, y, markerRadius, 0, Math.PI * 2, false);
+            ctx.fill();
+        }
+    }
+}
+
+class GraphPolar {
+    constructor({rMin = 0, rMax = 5, windingFrequency = 1, positionX = 0, positionY = 0, radius = 250, xScale = 1, yScale = xScale, rTicks = 3, thetaTicks = 8, rLabelOffset = 5, thetaLabelOffset = 15, axisColor = "black", graphColor = "blue"} = {}) {
+        this.changeRMinMax(rMin, rMax);
+        this.changeWindingFrequency(windingFrequency);
+
+        this.positionX = positionX;
+        this.positionY = positionY;
+        this.radius = radius;
+
+        this.xScale = xScale;
+        this.yScale = yScale;
+
+        this.rTicks = rTicks;
+        this.thetaTicks = thetaTicks;
+
+        this.rLabelOffset = rLabelOffset;
+        this.thetaLabelOffset = thetaLabelOffset;
+
+        this.axisColor = axisColor;
+        this.graphColor = graphColor;
+    }
+
+    changeRMinMax(rMin, rMax) {
+        this.rMin = rMin;
+        this.rMax = rMax;
+
+        this.rRange = this.rMax - this.rMin;
+    }
+
+    changeWindingFrequency(windingFrequency) {
+        this.windingFrequency = windingFrequency;
+    }
+
+    drawAxes() {
+        ctx.strokeStyle = this.axisColor;
+
+        ctx.beginPath();
+        ctx.moveTo(this.getXPosition(0, 0), this.getYPosition(0, 0));
+        ctx.lineTo(this.getXPosition(this.rMax, Math.PI / this.windingFrequency / 2), this.getYPosition(this.rMax, Math.PI / this.windingFrequency / 2));
+        ctx.stroke();
+
+        for (let i = 0; i < (this.rTicks * 2 - 1); i++) {
+            let rPercent = i / ((this.rTicks * 2 - 2));
+            let radius = rPercent * this.radius;
+            let r = parseFloat(((rPercent - this.rMin) * this.rRange).toPrecision(3));
+
+            if (radius == 0) {
+                radius += 5;
+            }
+            if (i % 2 == 0) {
+                ctx.globalAlpha = 1;
+
+                ctx.strokeText(r, this.getXPosition(r + (this.rLabelOffset / this.radius * this.rRange - this.rMin), Math.PI / this.windingFrequency / 2) - ctx.measureText(r).width / 2, this.getYPosition(r + (this.rLabelOffset / this.radius * this.rRange - this.rMin), Math.PI / this.windingFrequency / 2) );
+            } else {
+                ctx.globalAlpha = 0.25;
+            }
+
+
+            ctx.beginPath();
+            ctx.moveTo(this.getXPosition(r, 0), this.getYPosition(0, 0));
+            ctx.arc(this.getXPosition(this.rMin, 0), this.getYPosition(this.rMin, 0), radius, 0, Math.PI * 2, false);
+            ctx.stroke();
+        }
+
+        for (let i = 0; i < (this.thetaTicks * 2); i++) {
+            let thetaPercent = i / ((this.thetaTicks * 2));
+            let theta = (thetaPercent * Math.PI * 2 / this.windingFrequency).toPrecision(4);
+            let thetaText = parseFloat((thetaPercent * 2 / this.windingFrequency).toPrecision(3)) + "π";
+
+            let r = this.rMax + (this.thetaLabelOffset / this.radius * this.rRange - this.rMin);
+
+            if (i % 2 == 0) {
+                ctx.globalAlpha = 1;
+
+                ctx.strokeText(thetaText, this.getXPosition(r, theta) - ctx.measureText(thetaText).width / 2, this.getYPosition(r, theta));
+            } else {
+                ctx.globalAlpha = 0.25;
+            }
+
+            ctx.beginPath();
+            ctx.moveTo(this.getXPosition(this.rMin, 0), this.getYPosition(this.rMin, 0));
+            ctx.lineTo(this.getXPosition(this.rMax, theta), this.getYPosition(this.rMax, theta));
+            ctx.stroke();
+        }
+
+        ctx.globalAlpha = 1;
+    }
+
+    drawPoints(points, color = this.graphColor) {
+        ctx.strokeStyle = color;
+
+        let points1 = this.pointsPosition(points);
+
+        for (let i = 0; i < points1.length - 1; i++) {
+            let point1 = points1[i];
+            let point2 = points1[i + 1];
+
+            ctx.beginPath();
+            ctx.moveTo(point1[0], point1[1]);
+            ctx.lineTo(point2[0], point2[1]);
+            ctx.stroke();
+        }
+    }
+
+    drawMarkers(markers, markerRadius = 5, color = this.graphColor) {
+        ctx.fillStyle = color;
+
+        let markers1 = this.pointsPosition(markers);
+
+        for (let i = 0; i < markers1.length; i++) {
+            let marker = markers1[i];
+
+            ctx.beginPath();
+            ctx.arc(marker[0], marker[1], markerRadius, 0, Math.PI * 2, false);
+            ctx.fill();
+        }
+    }
+
+    drawMarkersCartesian(markers, markerRadius = 5, color = this.graphColor) {
+        ctx.fillStyle = color;
+    
+        for (let i = 0; i < markers.length; i++) {
+            let marker = markers[i];
+
+            let x = this.positionX + this.xScale * ((marker[0]) / this.rRange) * this.radius;
+            let y = this.positionY + this.yScale * ((marker[1]) / this.rRange) * this.radius;
+
+            ctx.beginPath();
+            ctx.arc(x, y, markerRadius, 0, Math.PI * 2, false);
+            ctx.fill();
+        }
+    }
+
+    polarToCartesianX(r, theta) {
+        return r * Math.cos(theta * this.windingFrequency);
+    }
+
+    polarToCartesianY(r, theta) {
+        return r * Math.sin(theta * this.windingFrequency);
+    }
+
+    polarToCartesian(r, theta) {
+        return [this.polarToCartesianX(r, theta), this.polarToCartesianY(r, theta)];
+    }
+
+    getXPosition(r, theta) {
+        let cosTheta = Math.cos(theta);
+        let transformedX = this.polarToCartesianX(r, theta) / this.rRange;
+
+        return this.positionX + this.xScale * transformedX * this.radius;
+    }
+
+    getYPosition(r, theta) {
+        let sinTheta = Math.sin(theta);
+        let transformedY = this.polarToCartesianY(r, theta) / this.rRange;
+
+        return this.positionY + this.yScale * transformedY * this.radius;
+    }
+
+    getPosition(r, theta) {
+        return [this.getXPosition(r, theta), this.getYPosition(r, theta)];
+    }
+
+    pointsPolarToCartesian(points) {
+        let points1 = [];
+
+        for (let i = 0; i < points.length; i++) {
+            let point = points[i];
+
+            points1[i] = this.polarToCartesian(point[0], point[1]);
+        }
+
+        return points1;
+    }
+
+    pointsPosition(points) {
+        let points1 = [];
+
+        for (let i = 0; i < points.length; i++) {
+            let point = points[i];
+
+            points1[i] = this.getPosition(point[0], point[1]);
+        }
+
+        return points1;
+    }
+}
+
+class FourierApproximator {
+    constructor(frequencyMin = 0, frequencyMax = 10, numPoints = 100) {
+        this.frequencyMin = frequencyMin;
+        this.frequencyMax = frequencyMax;
+        this.numPoints = numPoints;
+
+        this.frequencyRange = this.frequencyMax - this.frequencyMin;
+    }
+
+    getAmplitudes(points, xRange = 1) {
+        let amplitudes = [];
+
+        for (let i = 0; i < this.numPoints; i++) {
+            let frequency = i / this.numPoints * this.frequencyRange - this.frequencyMin;
+
+            let xPoints = [];
+            let yPoints = [];
+            
+            for (let j = 0; j < points.length; j++) {
+                let point = points[j];
+
+                let x = point[0];
+                let y = point[1];
+
+                xPoints[j] = [x, Math.cos(x * frequency) * y];
+                yPoints[j] = [x, Math.sin(x * frequency) * j];
+            }
+
+            let xAverage = this.getArea(xPoints) / xRange;
+            let yAverage = this.getArea(yPoints) / xRange;
+
+            amplitudes[i] = [xAverage, yAverage];
+        }
+
+        return amplitudes;
+    }
+
+    getAmplitude(points, frequency, xRange = 1) {
+        let xPoints = [];
+        let yPoints = [];
+        
+        for (let j = 0; j < points.length; j++) {
+            let point = points[j];
+
+            let x = point[0];
+            let y = point[1];
+
+            xPoints[j] = [x, Math.cos(x * frequency) * y];
+            yPoints[j] = [x, Math.sin(x * frequency) * j];
+        }
+
+        let xAverage = this.getArea(xPoints) / xRange;
+        let yAverage = this.getArea(yPoints) / xRange;
+
+        return [xAverage, yAverage];
+    }
+
+    getArea(points) {
+        let area = 0;
+
+        for (let i = 0; i < points.length - 1; i++) {
+            let point1 = points[i];
+            let point2 = points[i + 1];
+
+            let deltaX = point2[0] - point1[0];
+
+            let triangleArea = (point2[1] - point1[1]) * deltaX / 2;
+            let rectangleArea = point1[1] * deltaX;
+
+            area += triangleArea + rectangleArea;
+        }
+
+        return area;
     }
 }

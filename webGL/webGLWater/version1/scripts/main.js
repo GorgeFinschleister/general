@@ -36,15 +36,19 @@ function setup() {
 }
 
 function initWater(gl) {
-    let width = 10000;
+    let width = 20000;
     let height = 50;
-    let depth = 5000;
+    let depth = 10000;
     let centerX = 0;
-    let centerY = -150;
+    let centerY = -600;
     let centerZ = depth / -2;
-    let bisections = 10;
+    let bisections = 7;
 
-    let waterMesh = generatePlaneTriangles(width, 0, depth, centerX, centerY, centerZ, bisections).map((a) => a.array()).flat();
+    data2fv.uWaterDimensions = new Vector2(width, depth);
+    data2fv.uWaterPosition = new Vector2(centerX, centerZ);
+
+    let waterMeshVectors = generatePlaneTriangles(width, 0, depth, centerX, centerY, centerZ, bisections);
+    let waterMesh = new Float32Array(waterMeshVectors.map((a) => a.array()).flat());
 
     waterAttributeObject = {
         locations: ["aVertexPosition"],
@@ -65,13 +69,11 @@ function initWater(gl) {
 
 function initSky(gl) {
     let skyPositions = [];
-    let skyColors = [];
 
     let skyMesh = getSkyMesh();
 
     for (let i = 0; i < skyMesh.length; i++) {
         skyPositions.push(...skyMesh[i].array());
-        skyColors.push(...data4fv.uSkyColor.array());
     }
     
     skyAttributeObject = {
@@ -123,7 +125,7 @@ function tick() {
 }
 
 function update() {
-    data1f.uTick++;
+    data1f.uTick += data1f.uTickSpeed;
     data3fv.uCameraPosition = camera.position;
     data3fv.uCameraRotations = camera.rotations;
 
@@ -137,7 +139,7 @@ function update() {
     dataMat4.uProjectionMatrix = getMat4Projection(FoV, aspect, zNear, zFar);
     dataMat4.uModelViewMatrix = getMat4ModelView(rotationsArray, translationsArray);
 
-    data3fv.uSunRotations.add(data3fv.uSunRotationSpeed);
+    data3fv.uSunRotations.add(data3fv.uSunRotationSpeed.scaled(data1f.uTickSpeed));
     data3fv.uSunPosition = data3fv.uSunDefaultPosition.rotateRad(data3fv.uSunRotations);
     data3fv.uSunViewPosition = dataMat4.uModelViewMatrix.multiplyVector(data3fv.uSunPosition.toVector4()).toVector3();
 }

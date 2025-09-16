@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body onload="onload()">
+    <script src="../util/classPackage.js"></script>
+    <script src="../util/utilFunctions.js"></script>
+
+    <button onclick="start()">Start</button>
+
+    <script>
+        function onload() {
+            try {
+                Terminal.init();
+            } catch (error) {
+                alert(error.stack);
+            }
+        }
+
+        function start() {
+            let numberOfChannels = 2;
+            let duration = 3;
+            let sampleRate = 44100;
+            let frequency = 2 * Math.PI * 400;
+
+            let audioCtx = new AudioContext(
+                {
+                    sampleRate: sampleRate,
+                }
+            );
+
+            let audioBuffer = audioCtx.createBuffer(
+                numberOfChannels,
+                audioCtx.sampleRate * duration,
+                audioCtx.sampleRate,
+            )
+
+            for (let i = 0; i < numberOfChannels; i++) {
+                let nowBuffering = audioBuffer.getChannelData(i);
+
+                for (let j = 0; j < nowBuffering.length; j++) {
+                    let x = j / sampleRate;
+
+                    let waveValue = 
+                    2 * getWaveValueSine(x, frequency) +
+                    0.2 * getWaveValueCosine(x, 4 * frequency) + 
+                    0.2 * getWaveValueCosine(x, 6 * frequency) +
+                    0.2 * getWaveValueSine(x, 0.6 * frequency)
+                    ;
+
+                    nowBuffering[j] = waveValue;
+                }
+            }
+
+            let source = audioCtx.createBufferSource();
+            source.buffer = audioBuffer;
+
+            source.connect(audioCtx.destination);
+            source.start();
+        }
+
+        function getWaveValueSine(x, w) {
+            return Math.sin(x * w);
+        }
+
+        function getWaveValueCosine(x, w) {
+            return Math.cos(x * w);
+        }
+
+        function getWaveValueSquare(x, w) {
+            return getWaveValuePulse(x, w, 0.5);
+        }
+
+        function getWaveValuePulse(x, w, pulseWidth = 0.5) {
+            return Math.round(Math.sin(x * w) * 0.5 + pulseWidth) * 2 - 1;
+        }
+        
+        function getWaveValueTriangle(x, w) {
+            let abs_part_1 = (x % (2 * Math.PI / w)) / Math.PI;
+            let abs_part_2 = 1 / w;
+
+            return Math.abs(abs_part_1 - abs_part_2) * 2 * w - 1
+        }
+        
+        function getWaveValueSawtooth(x, w) {
+            let part_1 = w * (x % (2 * Math.PI / w)) / Math.PI;
+
+            return part_1 - 1;
+        }
+    </script>
+</body>
+</html>

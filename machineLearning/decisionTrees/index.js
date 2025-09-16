@@ -298,7 +298,7 @@ function loadHeaders() {
 function findBestNumPartitions() {
     try {
         let minPartitions = 1;
-        let maxPartitions = 50;
+        let maxPartitions = 20;
         let attempts = 1;
 
         let highestAccuracy = 0;

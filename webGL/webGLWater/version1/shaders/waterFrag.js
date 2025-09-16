@@ -22,8 +22,8 @@ uniform vec3 uCameraPosition;
 
 uniform float uSunDiffuseCoefficient;
 uniform float uSunDiffuseExponent;
-uniform float uSunSpecularCoefficient;
-uniform float uSunSpecularExponent;
+uniform float uWaveSpecularCoefficient;
+uniform float uWaveSpecularExponent;
 
 uniform float uAmbientCoefficient;
 
@@ -34,16 +34,18 @@ float getAdjustedLightValue(float value, float coefficient, float exponent) {
 void main() {
     vec3 normal = normalize(vNormal);
     vec3 rotatedNormal = normalize(vRotatedNormal);
+    
+    vec4 color = vColor;
 
     vec3 toCamera = normalize(vViewPosition);
     vec3 toSun = normalize(uSunViewPosition - vViewPosition);
     vec3 specularHalfwayVector = normalize((toSun - toCamera) / 2.0);
 
     float diffuseDot = getAdjustedLightValue(dot(rotatedNormal, toSun), uSunDiffuseCoefficient, uSunDiffuseExponent);
-    float specularDot = getAdjustedLightValue(dot(rotatedNormal, specularHalfwayVector), uSunSpecularCoefficient, uSunSpecularExponent);
+    float specularDot = getAdjustedLightValue(dot(rotatedNormal, specularHalfwayVector), uWaveSpecularCoefficient, uWaveSpecularExponent);
 
-    vec4 ambientColor = vColor * uAmbientCoefficient;
-    vec4 diffuseColor = vColor * uSunColor * diffuseDot * (1.0 - specularDot);
+    vec4 ambientColor = color * uAmbientCoefficient;
+    vec4 diffuseColor = color * uSunColor * diffuseDot * (1.0 - specularDot);
     vec4 specularColor = uSunColor * specularDot;
 
     vec4 finalColor = ambientColor + diffuseColor + specularColor;
