@@ -248,10 +248,207 @@ function generatePlaneTriangles(width, height, depth, centerX, centerY, centerZ,
         [0, 1, 2], [3, 2, 1],
     ]
 
+    vertices = vertices.map((v) => v.product(dimVec).sum(cenVec))
+
     let faces = indices.map((a) => a.map((i) => vertices[i]));
     faces = bisectFaces(faces, bisections);
 
-    return faces.flat().map((v) => v.product(dimVec).sum(cenVec));
+    return faces.flat();
+}
+
+function generatePlaneTrianglesFloat32(width, height, depth, centerX, centerY, centerZ, bisections = 0) {
+    let dimVec = new Vector3(width / 2, height / 2, depth / 2);
+    let cenVec = new Vector3(centerX, centerY, centerZ);
+
+    let vertices;
+
+    if (width == 0) {
+        vertices = [
+            new Vector3( +0, -1, +1 ), 
+            new Vector3( +0, -1, -1 ),
+            new Vector3( +0, +1, +1 ),
+            new Vector3( +0, +1, -1 ),
+        ];
+    } else if (height == 0) {
+        vertices = [
+            new Vector3( +1, +0, -1, ), 
+            new Vector3( -1, +0, -1, ),
+            new Vector3( +1, +0, +1, ),
+            new Vector3( -1, +0, +1, ),
+        ];
+    } else {
+        vertices = [
+            new Vector3( +1, -1, +0 ), 
+            new Vector3( -1, -1, +0 ),
+            new Vector3( +1, +1, +0 ),
+            new Vector3( -1, +1, +0 ),
+        ];
+    }
+
+    let indices = [
+        [0, 1, 2], [3, 2, 1],
+    ]
+
+    vertices = vertices.map((v) => v.product(dimVec).sum(cenVec));
+
+    let faces = new Float32Array(18);
+
+    for (let i = 0; i < indices.length; i++) {
+        let indices1 = indices[i];
+
+        for (let j = 0; j < indices1.length; j++) {
+            let vertexIndex = indices1[j];
+            let faceIndex = (i * 3 + j) * 3;
+
+            let vertex = vertices[vertexIndex];
+
+            faces[faceIndex + 0] = vertex[0];
+            faces[faceIndex + 1] = vertex[1];
+            faces[faceIndex + 2] = vertex[2];
+        }
+    }
+
+    for (let i = 0; i < bisections; i++) {
+        let faces1 = new Float32Array(9 * indices.length * Math.pow(4, i + 1));
+
+        let numFaces = indices.length * Math.pow(4, i);
+
+        for (let j = 0; j < numFaces; j++) {
+            let index = j * 9;
+            let index1 = index * 4;
+
+            let v1x = faces[index + 0];
+            let v1y = faces[index + 1];
+            let v1z = faces[index + 2];
+            let v2x = faces[index + 3];
+            let v2y = faces[index + 4];
+            let v2z = faces[index + 5];
+            let v3x = faces[index + 6];
+            let v3y = faces[index + 7];
+            let v3z = faces[index + 8];
+
+            let ax = (v1x + v2x) / 2;
+            let ay = (v1y + v2y) / 2;
+            let az = (v1z + v2z) / 2;
+
+            let bx = (v1x + v3x) / 2;
+            let by = (v1y + v3y) / 2;
+            let bz = (v1z + v3z) / 2;
+
+            let cx = (v2x + v3x) / 2;
+            let cy = (v2y + v3y) / 2;
+            let cz = (v2z + v3z) / 2;
+
+            faces1.set([
+                v1x, v1y, v1z, ax, ay, az, bx, by, bz, 
+                ax, ay, az, v2x, v2y, v2z, cx, cy, cz, 
+                bx, by, bz, cx, cy, cz, v3x, v3y, v3z,
+                ax, ay, az, cx, cy, cz, bx, by, bz,   
+            ], index1);
+        }
+
+        faces = faces1;
+    }
+
+    return faces;
+}
+
+function generatePlaneTrianglesFloat321(width, height, depth, centerX, centerY, centerZ, bisections = 0) {
+    let dimVec = new Vector3(width / 2, height / 2, depth / 2);
+    let cenVec = new Vector3(centerX, centerY, centerZ);
+
+    let vertices;
+
+    if (width == 0) {
+        vertices = [
+            new Vector3( +0, -1, +1 ), 
+            new Vector3( +0, -1, -1 ),
+            new Vector3( +0, +1, +1 ),
+            new Vector3( +0, +1, -1 ),
+        ];
+    } else if (height == 0) {
+        vertices = [
+            new Vector3( +1, +0, -1, ), 
+            new Vector3( -1, +0, -1, ),
+            new Vector3( +1, +0, +1, ),
+            new Vector3( -1, +0, +1, ),
+        ];
+    } else {
+        vertices = [
+            new Vector3( +1, -1, +0 ), 
+            new Vector3( -1, -1, +0 ),
+            new Vector3( +1, +1, +0 ),
+            new Vector3( -1, +1, +0 ),
+        ];
+    }
+
+    let indices = [
+        [0, 1, 2], [3, 2, 1],
+    ]
+
+    vertices = vertices.map((v) => v.product(dimVec).sum(cenVec));
+    let faces = new Float32Array(indices.length * 3 * 3 * Math.pow(4, bisections));
+
+    for (let i = 0; i < indices.length; i++) {
+        let indices1 = indices[i];
+
+        for (let j = 0; j < indices1.length; j++) {
+            let vertexIndex = indices1[j];
+            let faceIndex = (i * 3 + j) * 3 * Math.pow(4, bisections);
+
+            let vertex = vertices[vertexIndex];
+
+            faces[faceIndex + 0] = vertex[0];
+            faces[faceIndex + 1] = vertex[1];
+            faces[faceIndex + 2] = vertex[2];
+        }
+    }
+
+    for (let i = 0; i < bisections; i++) {
+        let offset1 = Math.pow(4, bisections - i) * 3;
+        let offset2 = offset1 / 4;
+        let numFaces = faces.length / (offset1 * 3);
+
+        for (let j = 0; j < numFaces; j++) {
+            let index1 = (j * 3 + 0) * offset1;
+            let index2 = (j * 3 + 1) * offset1;
+            let index3 = (j * 3 + 2) * offset1;
+
+            let v1x = faces[index1 + 0];
+            let v1y = faces[index1 + 1];
+            let v1z = faces[index1 + 2];
+            let v2x = faces[index2 + 0];
+            let v2y = faces[index2 + 1];
+            let v2z = faces[index2 + 2];
+            let v3x = faces[index3 + 0];
+            let v3y = faces[index3 + 1];
+            let v3z = faces[index3 + 2];
+
+            let ax = (v1x + v2x) / 2;
+            let ay = (v1y + v2y) / 2;
+            let az = (v1z + v2z) / 2;
+
+            let bx = (v1x + v3x) / 2;
+            let by = (v1y + v3y) / 2;
+            let bz = (v1z + v3z) / 2;
+
+            let cx = (v2x + v3x) / 2;
+            let cy = (v2y + v3y) / 2;
+            let cz = (v2z + v3z) / 2;
+
+            faces.set([ax, ay, az], index1 + offset2 * 1);
+            faces.set([bx, by, bz], index1 + offset2 * 2);
+            faces.set([ax, ay, az], index1 + offset2 * 3);
+            faces.set([cx, cy, cz], index2 + offset2 * 1);
+            faces.set([bx, by, bz], index2 + offset2 * 2);
+            faces.set([cx, cy, cz], index2 + offset2 * 3);
+            faces.set([ax, ay, az], index3 + offset2 * 1);
+            faces.set([cx, cy, cz], index3 + offset2 * 2);
+            faces.set([bx, by, bz], index3 + offset2 * 3);
+        }
+    }
+
+    return faces;
 }
 
 function bisectFaces(faces, bisections) {
