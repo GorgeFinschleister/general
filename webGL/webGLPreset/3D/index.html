@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: none;
+            overflow-y: hidden;
+            background-color: black;
+        }
+    </style>
+</head>
+<body onload="onload()">
+    <canvas id="glcanvas" style="width: 100vw; height: 100vh;"></canvas>
+
+    <script src="../../../util/classPackage.js"></script>
+    <script src="../../../util/utilFunctions.js"></script>
+    <script src="../../../util/fileParsers.js"></script>
+
+    <script src="../../webGLUtil/webGLUtil.js"></script>
+
+    <script src="./scripts/main.js"></script>
+    <script src="./scripts/render.js"></script>
+    <script src="./scripts/variables.js"></script>
+
+    <script src="./shaders/fragmentShader.js"></script>
+    <script src="./shaders/vertexShader.js"></script>
+</body>
+</html>
