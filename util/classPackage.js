@@ -564,7 +564,7 @@ class Matrix {
         return newMatrix;
     }
 
-    static translation2D(tX, tY = tX) {
+    static translation2D(tX = 0, tY = tX) {
         if (Array.isArray(tX)) {
             tY = tX[1];
             tX = tX[0];
@@ -578,7 +578,7 @@ class Matrix {
         return newMatrix;
     }
     
-    static translation3D(tX, tY = tX, tZ = tY) {
+    static translation3D(tX = 0, tY = tX, tZ = tY) {
         if (Array.isArray(tX)) {
             tZ = tX[2];
             tY = tX[1];
@@ -594,9 +594,24 @@ class Matrix {
         return newMatrix;
     }
 
-    static affineTransformation2D(rotations, translations) {
+    static shear2D(sX = 0, sY = sX) {
+        if (Array.isArray(sX)) {
+            sY = sX[1];
+            sX = sX[0];
+        }
+
+        let newMatrix = Matrix.identity(3);
+
+        newMatrix.setValue(0, 1, sX);
+        newMatrix.setValue(1, 0, sY);
+
+        return newMatrix;
+    }
+
+    static affineTransformation2D(rotations = [0, 0], translations = [0, 0], shears = [0, 0], scalar = 1, order = 0) {
         let rotationMatrix;
         let translationMatrix;
+        let shearMatrix;
 
         if (Array.isArray(rotations)) {
             rotationMatrix = Matrix.rotation2D(rotations);
@@ -610,23 +625,35 @@ class Matrix {
             translationMatrix = translations.clone();
         }
 
+        if (Array.isArray(shears)) {
+            shearMatrix = Matrix.shear2D(shears);
+        } else {
+            shearMatrix = shears.clone();
+        }
+
+        rotationMatrix = rotationMatrix.changeDimensionsIdentity(3, 3);
+        shearMatrix = shearMatrix.changeDimensionsIdentity(3, 3);
+        translationMatrix = translationMatrix.changeDimensionsIdentity(3, 3);
         translationMatrix.setValue(0, 0, 0);
         translationMatrix.setValue(1, 1, 0);
 
-        rotationMatrix = rotationMatrix.changeDimensionsIdentity(3, 3);
-        translationMatrix = translationMatrix.changeDimensionsIdentity(3, 3);
+        let newMatrix;
 
-        let newMatrix = rotationMatrix.sum(translationMatrix);
+        if (order == 0) {
+            newMatrix = rotationMatrix.multiply(shearMatrix).sum(translationMatrix).multiplyNum(scalar);
+        } else {
+            newMatrix = shearMatrix.multiply(rotationMatrix).sum(translationMatrix).multiplyNum(scalar);
+        }
 
         return newMatrix;
     }
 
-    static affineTransformation3D(rotations, translations) {
+    static affineTransformation3D(rotations, translations, scalar = 1) {
         let rotationMatrix;
         let translationMatrix;
 
         if (Array.isArray(rotations)) {
-            rotationMatrix = Matrix.rotation3D(rotations);
+            rotationMatrix = Matrix.rotation3D(rotations, scalar);
         } else {
             rotationMatrix = rotations.clone();
         }
@@ -637,8 +664,11 @@ class Matrix {
             translationMatrix = translations.clone();
         }
 
-        rotationMatrix = rotationMatrix.changeDimensionsIdentity(4, 4);
+        rotationMatrix = rotationMatrix.changeDimensionsIdentity(4, 4).multiplyNum(scalar);
         translationMatrix = translationMatrix.changeDimensionsIdentity(4, 4);
+        translationMatrix.setValue(0, 0, 0);
+        translationMatrix.setValue(1, 1, 0);
+        translationMatrix.setValue(2, 2, 0);
 
         let newMatrix = rotationMatrix.multiply(translationMatrix);
 
@@ -1484,6 +1514,10 @@ class Matrix {
         }
 
         return newMatrix;
+    }
+
+    lerp(matrix2, weight) {
+        return this.sum(matrix2.difference(this).multiplyNum(weight));
     }
 }
 

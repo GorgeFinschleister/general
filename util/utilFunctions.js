@@ -63,6 +63,10 @@ function fRandom(limit) {
     return Math.floor(Math.random() * limit);
 }
 
+function randRange(min, max) {
+    return Math.random() * (max - min) + min;
+}
+
 function splitStringArray(string, delimiters) {
     const regex = new RegExp(`[${delimiters.join('')}]`);
 
